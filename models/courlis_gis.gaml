@@ -50,7 +50,6 @@ global{ //Declare the world as a torus or not torus environment
 		
 		matrix NDVI1 <- matrix(csv_file("../includes/dem/resamp_A2016097.250m_16_days.asc", " ", float));
 		ask dem_cell {
-			elevation <- grid_value;
 			NDVI97 <- float(NDVI1[grid_x, grid_y]) * 0.0001; // rescaling NDVI
 		}
 		
@@ -64,6 +63,7 @@ global{ //Declare the world as a torus or not torus environment
     			 	theo_path <- myself.myPath;
     			 	closestGPS <- (self distance_to (theo_path closest_to self)) / 1000;
     			 	myName <- myself.logg;
+    			 	target_travel <- myself.location;
     			 }
 			//create courlis  number:10 with:[location::location];
 		}	
@@ -78,9 +78,12 @@ global{ //Declare the world as a torus or not torus environment
 
 //Grid species representing a cellular automata
 grid dem_cell file:dem_file {
-	float elevation;
+	float elevation <- grid_value;
 	float NDVI97;
-	rgb pcolor <- blend(#green,#white, elevation) update: blend(#green,#white, elevation);
+	rgb pcolor <- blend(#green,#white, elevation);
+	
+	
+	
 	aspect dem {
 		draw shape color:pcolor border:#black empty:false;	
 	}
@@ -92,6 +95,7 @@ species events{
 	list<pts_ctrl> myPath;
 	aspect default {
 		draw circle(20000) color: #red;
+		draw string(logg ) size: 30#km color: #black ;
 	}
 }
 
@@ -107,7 +111,7 @@ species pts_ctrl {
 
 
 species courlis skills:[moving]{
-	geometry target_travel <- point(one_of(events where(each.ev_type="Arrive")));
+	point target_travel;
 	geometry food_target;
 	geometry perceived_area ;
 	list<dem_cell> myVisibility;
@@ -124,7 +128,7 @@ species courlis skills:[moving]{
 	reflex perception {
 		/* Define the courlis percetion */
 		//perceived_area <-(square(perception_distance)) intersection circle(perception_distance);
-		perceived_area <- (cone((180+heading)-3#km,(180+heading)+3#km) intersection world.shape) intersection circle(perception_distance);
+		perceived_area <- (cone( (180 + heading) -3#km,(180 + heading) +3#km) intersection world.shape) intersection circle(perception_distance);
 		 if (perceived_area != nil) {
 		 	myVisibility <- dem_cell overlapping perceived_area where(each.elevation < 179);
 		 }
@@ -177,6 +181,7 @@ species courlis skills:[moving]{
    	/*GESTION des aspect */
    	aspect body {
 		 draw triangle(20000) rotate:90 + heading color: #red;
+		 draw string(myName ) size: 30#km color: #black ;
 	}
 	
 	aspect perception {
@@ -199,9 +204,10 @@ experiment courlisDev type: gui {
 		display sp_display type: opengl{
 			//species country refresh: false transparency: 0.5;
 			//image country gis:"../includes/world_shape/europ_migration3034.shp" color: rgb('grey');
-			species events refresh: false;
+			
 			//species dem_cell;
 			species courlis aspect:body;
+			species events refresh: false;
 			species courlis aspect: perception transparency: 0.5;
 			species courlis aspect: trajectory transparency: 0.5;
 			species pts_ctrl aspect: base;
